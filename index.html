@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CRED App</title>
+</head>
+<body>
+  <div id="root"></div>
+</body>
+</html>
+
+// frontend/src/components/Navbar.js
+import React from "react";
+import { Link } from "react-router-dom";
+
+const Navbar = () => {
+  return (
+    <nav>
+      <ul>
+        <li><Link to="/">Home</Link></li>
+        <li><Link to="/login">Login</Link></li>
+      </ul>
+    </nav>
+  );
+};
+
+export default Navbar;
+
+// frontend/src/components/DataForm.js
+import React, { useState } from "react";
+
+const DataForm = ({ onSubmit }) => {
+  const [formData, setFormData] = useState({ name: "", email: "", phone: "" });
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    onSubmit(formData);
+    setFormData({ name: "", email: "", phone: "" });
+  };
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <input name="name" value={formData.name} onChange={handleChange} placeholder="Name" required />
+      <input name="email" value={formData.email} onChange={handleChange} placeholder="Email" required />
+      <input name="phone" value={formData.phone} onChange={handleChange} placeholder="Phone" required />
+      <button type="submit">Submit</button>
+    </form>
+  );
+};
+
+export default DataForm;
+
+// frontend/src/components/DataList.js
+import React from "react";
+
+const DataList = ({ data, onEdit, onDelete }) => {
+  return (
+    <ul>
+      {data.map((item) => (
+        <li key={item._id}>
+          {item.name} - {item.email} - {item.phone}
+          <button onClick={() => onEdit(item)}>Edit</button>
+          <button onClick={() => onDelete(item._id)}>Delete</button>
+        </li>
+      ))}
+    </ul>
+  );
+};
+
+export default DataList;
+
+// frontend/src/components/EditForm.js
+import React, { useState, useEffect } from "react";
+
+const EditForm = ({ currentData, onUpdate }) => {
+  const [formData, setFormData] = useState(currentData);
+
+  useEffect(() => {
+    setFormData(currentData);
+  }, [currentData]);
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    onUpdate(formData);
+  };
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <input name="name" value={formData.name} onChange={handleChange} required />
+      <input name="email" value={formData.email} onChange={handleChange} required />
+      <input name="phone" value={formData.phone} onChange={handleChange} required />
+      <button type="submit">Update</button>
+    </form>
+  );
+};
+
+export default EditForm;
+
+// frontend/src/pages/HomePage.js
+import React, { useState, useEffect } from "react";
+import DataForm from "../components/DataForm";
+import DataList from "../components/DataList";
+import EditForm from "../components/EditForm";
+import axios from "axios";
+
+const HomePage = () => {
+  const [data, setData] = useState([]);
+  const [editingData, setEditingData] = useState(null);
+
+  useEffect(() => {
+    axios.get("http://localhost:5000/api/data").then((response) => setData(response.data));
+  }, []);
+
+  const addData = (newData) => {
+    axios.post("http://localhost:5000/api/data", newData).then((response) => {
+      setData([...data, response.data]);
+    });
+  };
+
+  const updateData = (updatedData) => {
+    axios.put(`http://localhost:5000/api/data/${updatedData._id}`, updatedData).then((response) => {
+      setData(data.map((item) => (item._id === updatedData._id ? response.data : item)));
+      setEditingData(null);
+    });
+  };
+
+  const deleteData = (id) => {
+    axios.delete(`http://localhost:5000/api/data/${id}`).then(() => {
+      setData(data.filter((item) => item._id !== id));
+    });
+  };
+
+  return (
+    <div>
+      <h1>Data Management</h1>
+      {editingData ? (
+        <EditForm currentData={editingData} onUpdate={updateData} />
+      ) : (
+        <DataForm onSubmit={addData} />
+      )}
+      <DataList data={data} onEdit={setEditingData} onDelete={deleteData} />
+    </div>
+  );
+};
+
+export default HomePage;
